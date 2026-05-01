@@ -1,0 +1,27 @@
+# Ignore node modules
+node_modules/
+npm-debug.log
+
+# Ignore build outputs
+dist/
+build/
+*.js.map
+*.ts.map
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+*.md
+!README.md
