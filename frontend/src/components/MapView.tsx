@@ -33,7 +33,7 @@ export const MapView: React.FC = () => {
   const dustbins = useSimulationStore((state) => state.dustbins);
   const authorities = useSimulationStore((state) => state.authorities);
   const [selectedDustbin, setSelectedDustbin] = useState<DustbinData | null>(null);
-  const [showHeatmap, setShowHeatmap] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(false);
   const criticalCount = dustbins.filter((dustbin) => dustbin.status === 'critical').length;
   const collectingCount = dustbins.filter((dustbin) => dustbin.status === 'collecting').length;
 
@@ -44,7 +44,8 @@ export const MapView: React.FC = () => {
   };
 
   const getRadius = (fillLevel: number): number => {
-    return Math.max(50, (fillLevel / 100) * 200);
+    // Fixed large radius for all heatmap zones as requested
+    return 1000;
   };
 
   return (
@@ -74,6 +75,7 @@ export const MapView: React.FC = () => {
         <button 
           className={`map-btn ${showHeatmap ? 'active' : ''}`}
           onClick={() => setShowHeatmap(!showHeatmap)}
+          id="heatmap-toggle-btn"
         >
           {showHeatmap ? 'Hide Heatmap' : 'Show IoT Heatmap'}
         </button>
@@ -86,7 +88,7 @@ export const MapView: React.FC = () => {
           style={{ height: '100%', width: '100%' }}
           className="leaflet-map"
         >
-          <Pane name="heatmap" style={{ zIndex: 450 }} />
+          <Pane name="heatmap-pane" style={{ zIndex: 450 }} />
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -100,13 +102,14 @@ export const MapView: React.FC = () => {
                 <Circle
                   center={[dustbin.location.latitude, dustbin.location.longitude]}
                   radius={getRadius(dustbin.fillLevel)}
-                  pane="heatmap"
+                  pane="heatmap-pane"
                   pathOptions={{
                     fillColor: getStatusColor(dustbin.fillLevel),
                     color: getStatusColor(dustbin.fillLevel),
-                    fillOpacity: 0.4,
-                    opacity: 0.6,
-                    weight: 1,
+                    fillOpacity: 0.3,
+                    opacity: 0.5,
+                    weight: 2,
+                    dashArray: '5, 10',
                   }}
                 />
               )}
