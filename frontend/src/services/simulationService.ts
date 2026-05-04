@@ -12,11 +12,11 @@ import {
   SustainabilityMetrics,
 } from '../types';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 5000,
+  timeout: 10000,
 });
 
 export const simulationService = {
@@ -106,6 +106,7 @@ export const simulationService = {
     residentId: string;
     weightKg?: number;
     useRandomWeight?: boolean;
+    allowSimulated?: boolean;
   }): Promise<{ entry: unknown }> => {
     const response = await api.post('/waste/dispose', payload);
     return response.data;
@@ -144,7 +145,8 @@ export const simulationService = {
 
   // WebSocket event subscription (for real-time updates)
   getWebSocketUrl: (): string => {
-    return 'ws://localhost:3001/ws';
+    const baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
+    return `${baseUrl}/ws`;
   },
 };
 

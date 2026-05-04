@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, RotateCcw, Zap, Radio } from 'lucide-react';
+import { RotateCcw, Radio } from 'lucide-react';
 import './SmartDustbin.css';
 
 interface WasteItem {
@@ -27,39 +27,84 @@ const wasteItems: WasteItem[] = [
   { id: '2', emoji: '🥕', name: 'Carrot Peels', category: 'organic', sensorSignature: 238 },
   { id: '3', emoji: '🌽', name: 'Corn Cob', category: 'organic', sensorSignature: 252 },
   { id: '4', emoji: '🍌', name: 'Banana Peel', category: 'organic', sensorSignature: 258 },
-  { id: '5', emoji: '📰', name: 'Newspaper', category: 'paper', sensorSignature: 432 },
-  { id: '6', emoji: '📄', name: 'Office Paper', category: 'paper', sensorSignature: 428 },
-  { id: '7', emoji: '📦', name: 'Cardboard Box', category: 'paper', sensorSignature: 445 },
-  { id: '8', emoji: '📕', name: 'Old Magazine', category: 'paper', sensorSignature: 438 },
-  { id: '9', emoji: '🛍️', name: 'Plastic Bag', category: 'plastic', sensorSignature: 612 },
-  { id: '10', emoji: '🥤', name: 'Plastic Cup', category: 'plastic', sensorSignature: 628 },
-  { id: '11', emoji: '🧴', name: 'Plastic Bottle', category: 'plastic', sensorSignature: 645 },
-  { id: '12', emoji: '🎮', name: 'Broken Toy', category: 'plastic', sensorSignature: 618 },
-  { id: '13', emoji: '🥫', name: 'Aluminum Can', category: 'metal', sensorSignature: 785 },
-  { id: '14', emoji: '⚙️', name: 'Metal Gear', category: 'metal', sensorSignature: 798 },
-  { id: '15', emoji: '🪛', name: 'Bent Bolt', category: 'metal', sensorSignature: 812 },
-  { id: '16', emoji: '🔧', name: 'Rusty Wrench', category: 'metal', sensorSignature: 805 },
-  { id: '17', emoji: '🍷', name: 'Wine Bottle', category: 'glass', sensorSignature: 925 },
-  { id: '18', emoji: '🥛', name: 'Glass Jar', category: 'glass', sensorSignature: 932 },
-  { id: '19', emoji: '🪟', name: 'Broken Glass', category: 'glass', sensorSignature: 945 },
-  { id: '20', emoji: '🔬', name: 'Glass Flask', category: 'glass', sensorSignature: 938 },
+  { id: '5', emoji: '🥚', name: 'Egg Shells', category: 'organic', sensorSignature: 266 },
+  { id: '6', emoji: '🍵', name: 'Tea Leaves', category: 'organic', sensorSignature: 232 },
+  { id: '7', emoji: '☕', name: 'Coffee Grounds', category: 'organic', sensorSignature: 241 },
+  { id: '8', emoji: '🍞', name: 'Bread Crust', category: 'organic', sensorSignature: 268 },
+  { id: '9', emoji: '🥬', name: 'Leafy Greens', category: 'organic', sensorSignature: 236 },
+  { id: '10', emoji: '🍚', name: 'Rice Leftovers', category: 'organic', sensorSignature: 255 },
 ];
 
 const categoryColors: Record<string, string> = {
   organic: '#16a34a',
-  paper: '#d97706',
-  plastic: '#2563eb',
-  metal: '#64748b',
-  glass: '#0284c7',
 };
 
 const categoryNames: Record<string, string> = {
-  organic: 'Organic Waste',
-  paper: 'Paper Waste',
-  plastic: 'Plastic Waste',
-  metal: 'Metal Waste',
-  glass: 'Glass Waste',
+  organic: 'Food Waste',
 };
+
+interface SensorDefinition {
+  id: string;
+  name: string;
+  unit: string;
+  min: number;
+  max: number;
+  decimals: number;
+  description: string;
+}
+
+const sensorDefinitions: SensorDefinition[] = [
+  {
+    id: 'S1',
+    name: 'Methane (CH4)',
+    unit: 'ppm',
+    min: 0,
+    max: 2000,
+    decimals: 0,
+    description: 'Gas output from decomposition activity.',
+  },
+  {
+    id: 'S2',
+    name: 'Ammonia (NH3)',
+    unit: 'ppm',
+    min: 0,
+    max: 500,
+    decimals: 0,
+    description: 'Odor intensity and protein breakdown indicator.',
+  },
+  {
+    id: 'S3',
+    name: 'Moisture',
+    unit: '%',
+    min: 0,
+    max: 100,
+    decimals: 0,
+    description: 'Wetness level inside the organic waste stack.',
+  },
+  {
+    id: 'S4',
+    name: 'Temperature',
+    unit: 'C',
+    min: 10,
+    max: 55,
+    decimals: 1,
+    description: 'Internal bin temperature for compost activity.',
+  },
+  {
+    id: 'S5',
+    name: 'VOC Index',
+    unit: 'idx',
+    min: 0,
+    max: 500,
+    decimals: 0,
+    description: 'Volatile organic compound intensity proxy.',
+  },
+];
+
+const clampValue = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const scaleReading = (value: number, min: number, max: number) =>
+  min + (value / 1000) * (max - min);
 
 import simulationService from '../services/simulationService';
 
@@ -138,6 +183,7 @@ export const SmartDustbin: React.FC<SmartDustbinProps> = ({ residentId, onWasteS
         await simulationService.submitWasteDisposal({
           residentId,
           weightKg: simulatedWeight,
+          allowSimulated: true,
         });
         if (onWasteSubmitted) onWasteSubmitted();
       } catch (e) {
@@ -179,21 +225,86 @@ export const SmartDustbin: React.FC<SmartDustbinProps> = ({ residentId, onWasteS
   // Calculate statistics
   const stats = {
     total: detectionHistory.length,
-    organic: detectionHistory.filter(d => d.item.category === 'organic').length,
-    paper: detectionHistory.filter(d => d.item.category === 'paper').length,
-    plastic: detectionHistory.filter(d => d.item.category === 'plastic').length,
-    metal: detectionHistory.filter(d => d.item.category === 'metal').length,
-    glass: detectionHistory.filter(d => d.item.category === 'glass').length,
-    avgConfidence: detectionHistory.length > 0 
+    organic: detectionHistory.length,
+    avgConfidence: detectionHistory.length > 0
       ? Math.round(detectionHistory.reduce((sum, d) => sum + d.confidence, 0) / detectionHistory.length)
       : 0,
   };
+
+  const activeReadings = sensorReading.length > 0
+    ? sensorReading
+    : lastDetection?.sensorReadings ?? [];
+
+  const sensorDetails = sensorDefinitions.map((sensor, index) => {
+    const raw = activeReadings[index];
+    const scaled = raw !== undefined ? scaleReading(raw, sensor.min, sensor.max) : null;
+    return {
+      ...sensor,
+      raw,
+      scaledValue: scaled,
+      displayValue: scaled !== null ? scaled.toFixed(sensor.decimals) : '--',
+      rangeLabel: `${sensor.min}-${sensor.max}${sensor.unit}`,
+    };
+  });
+
+  const averageReading = activeReadings.length > 0
+    ? activeReadings.reduce((sum, value) => sum + value, 0) / activeReadings.length
+    : 0;
+
+  const readingSpread = activeReadings.length > 0
+    ? Math.max(...activeReadings) - Math.min(...activeReadings)
+    : 0;
+
+  const signalStability = activeReadings.length > 0
+    ? clampValue(Math.round(100 - readingSpread / 8), 0, 100)
+    : null;
+
+  const moistureValue = sensorDetails[2]?.scaledValue ?? null;
+  const temperatureValue = sensorDetails[3]?.scaledValue ?? null;
+  const vocValue = sensorDetails[4]?.scaledValue ?? null;
+
+  const methaneValue = sensorDetails[0]?.scaledValue ?? null;
+  const ammoniaValue = sensorDetails[1]?.scaledValue ?? null;
+
+  const gasIndex = methaneValue !== null && ammoniaValue !== null
+    ? Math.round(
+        ((methaneValue / sensorDetails[0].max) * 0.7 +
+          (ammoniaValue / sensorDetails[1].max) * 0.3) * 100
+      )
+    : null;
+
+  const activeConfidence = lastDetection
+    ? Math.round(lastDetection.confidence)
+    : stats.avgConfidence;
+
+  const moistureScore = moistureValue !== null
+    ? clampValue(Math.round(100 - Math.abs(moistureValue - 60) * 1.6), 0, 100)
+    : null;
+
+  const compostScore = moistureScore !== null
+    ? clampValue(Math.round(moistureScore * 0.45 + activeConfidence * 0.55), 0, 100)
+    : null;
+
+  const estimatedWeight = activeReadings.length > 0
+    ? Number(((averageReading / 1000) * 2.5 + 0.15).toFixed(2))
+    : null;
+
+  const infoCards = [
+    { label: 'Total Detected', value: String(stats.total) },
+    { label: 'Avg Confidence', value: `${stats.avgConfidence}%` },
+    { label: 'Organic Items', value: String(stats.organic) },
+    { label: 'Moisture', value: moistureValue !== null ? `${moistureValue.toFixed(0)}%` : '--' },
+    { label: 'Gas Index', value: gasIndex !== null ? `${gasIndex}%` : '--' },
+    { label: 'Signal Stability', value: signalStability !== null ? `${signalStability}%` : '--' },
+    { label: 'Est. Weight', value: estimatedWeight !== null ? `${estimatedWeight} kg` : '--' },
+    { label: 'Compost Score', value: compostScore !== null ? `${compostScore}%` : '--' },
+  ];
 
   return (
     <div className="smart-dustbin-container">
       <div className="dustbin-game">
         <h2>Smart IoT Dustbin Waste Detection</h2>
-        <p className="sd-subtitle">Insert waste items to simulate sensor scans and real-time material classification.</p>
+        <p className="sd-subtitle">Insert food waste items to simulate sensor scans and organic classification.</p>
 
         {/* Main Dustbin Display */}
         <div className="dustbin-layout-split">
@@ -232,14 +343,15 @@ export const SmartDustbin: React.FC<SmartDustbinProps> = ({ residentId, onWasteS
             </div>
 
             {/* Sensor Display */}
-          {sensorReading.length > 0 && (
+          {sensorDefinitions.length > 0 && (
             <div className="sensor-display">
               <div className="sensor-header">
-                <Radio size={16} /> IoT Sensor Readings
+                <Radio size={16} /> IoT Sensor Readings (0-1000 raw scale)
               </div>
               <div className="sensor-graph">
-                {sensorReading.map((reading, idx) => {
-                  const percentage = (reading / 1000) * 100;
+                {sensorDetails.map((sensor, idx) => {
+                  const rawValue = sensor.raw ?? 0;
+                  const percentage = (rawValue / 1000) * 100;
                   return (
                     <div key={idx} className="sensor-bar-container">
                       <div className="sensor-bar">
@@ -248,20 +360,51 @@ export const SmartDustbin: React.FC<SmartDustbinProps> = ({ residentId, onWasteS
                           style={{ height: `${percentage}%` }}
                         ></div>
                       </div>
-                      <div className="sensor-label">S{idx + 1}</div>
+                      <div className="sensor-label">{sensor.id}</div>
+                      <div className="sensor-value">
+                        {sensor.displayValue}{sensor.displayValue === '--' ? '' : ` ${sensor.unit}`}
+                      </div>
                     </div>
                   );
                 })}
               </div>
               <div className="sensor-avg">
-                Avg: {Math.round(sensorReading.reduce((a, b) => a + b, 0) / sensorReading.length)}
+                Avg Raw: {activeReadings.length > 0 ? Math.round(averageReading) : '--'}
+                {temperatureValue !== null && (
+                  <span> | Temp: {temperatureValue.toFixed(1)} C</span>
+                )}
+                {vocValue !== null && (
+                  <span> | VOC: {vocValue.toFixed(0)} idx</span>
+                )}
               </div>
             </div>
           )}
+
+          <div className="sensor-details">
+            <div className="sensor-details-header">
+              Sensor Channels (S1-S5)
+              <span>Each channel maps raw 0-1000 to real-world units.</span>
+            </div>
+            <div className="sensor-detail-grid">
+              {sensorDetails.map((sensor) => (
+                <div key={sensor.id} className="sensor-detail-card">
+                  <div className="sensor-detail-top">
+                    <span className="sensor-tag">{sensor.id}</span>
+                    <span className="sensor-name">{sensor.name}</span>
+                  </div>
+                  <div className="sensor-detail-value">
+                    {sensor.displayValue}{sensor.displayValue === '--' ? '' : ` ${sensor.unit}`}
+                  </div>
+                  <p className="sensor-detail-desc">{sensor.description}</p>
+                  <div className="sensor-detail-range">Range: {sensor.rangeLabel}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
           <div className="dustbin-right-panel">
             <div className="items-section-vertical">
-              <h3>Available Waste (Drag & Drop)</h3>
+              <h3>Available Food Waste (Drag & Drop)</h3>
               <div className="items-grid-vertical">
                 {wasteItems.map((item) => (
                   <div
@@ -283,41 +426,12 @@ export const SmartDustbin: React.FC<SmartDustbinProps> = ({ residentId, onWasteS
 
         {/* Statistics */}
         <div className="stats-grid">
-          <div className="stat-box">
-            <span className="stat-icon">📊</span>
-            <span className="stat-label">Total Detected</span>
-            <span className="stat-value">{stats.total}</span>
-          </div>
-          <div className="stat-box">
-            <span className="stat-icon">🎯</span>
-            <span className="stat-label">Avg Confidence</span>
-            <span className="stat-value">{stats.avgConfidence}%</span>
-          </div>
-          <div className="stat-box" style={{ borderColor: categoryColors.organic }}>
-            <span className="stat-icon">🌱</span>
-            <span className="stat-label">Organic</span>
-            <span className="stat-value">{stats.organic}</span>
-          </div>
-          <div className="stat-box" style={{ borderColor: categoryColors.paper }}>
-            <span className="stat-icon">📰</span>
-            <span className="stat-label">Paper</span>
-            <span className="stat-value">{stats.paper}</span>
-          </div>
-          <div className="stat-box" style={{ borderColor: categoryColors.plastic }}>
-            <span className="stat-icon">🛍️</span>
-            <span className="stat-label">Plastic</span>
-            <span className="stat-value">{stats.plastic}</span>
-          </div>
-          <div className="stat-box" style={{ borderColor: categoryColors.metal }}>
-            <span className="stat-icon">⚙️</span>
-            <span className="stat-label">Metal</span>
-            <span className="stat-value">{stats.metal}</span>
-          </div>
-          <div className="stat-box" style={{ borderColor: categoryColors.glass }}>
-            <span className="stat-icon">🔬</span>
-            <span className="stat-label">Glass</span>
-            <span className="stat-value">{stats.glass}</span>
-          </div>
+          {infoCards.map((card) => (
+            <div key={card.label} className="stat-box">
+              <span className="stat-label">{card.label}</span>
+              <span className="stat-value">{card.value}</span>
+            </div>
+          ))}
         </div>
 
         {/* Detection History */}

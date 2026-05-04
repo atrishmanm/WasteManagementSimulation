@@ -1,0 +1,38 @@
+services:
+  # Backend Service
+  - type: web
+    name: waste-simulator-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && node src/server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+
+  # Frontend Service
+  - type: static
+    name: waste-simulator-frontend
+    env: static
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: waste-simulator-backend
+          property: url
+          suffix: /api
+      - key: VITE_WS_URL
+        fromService:
+          type: web
+          name: waste-simulator-backend
+          property: url
+          replace:
+            - search: https://
+              replace: wss://
+            - search: http://
+              replace: ws://

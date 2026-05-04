@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, Pane } from 'react-leaflet';
 import L from 'leaflet';
 import { useSimulationStore } from '../store/simulationStore';
 import { DustbinData, DustbinStatus } from '../types';
@@ -86,6 +86,7 @@ export const MapView: React.FC = () => {
           style={{ height: '100%', width: '100%' }}
           className="leaflet-map"
         >
+          <Pane name="heatmap" style={{ zIndex: 450 }} />
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -99,11 +100,13 @@ export const MapView: React.FC = () => {
                 <Circle
                   center={[dustbin.location.latitude, dustbin.location.longitude]}
                   radius={getRadius(dustbin.fillLevel)}
+                  pane="heatmap"
                   pathOptions={{
                     fillColor: getStatusColor(dustbin.fillLevel),
                     color: getStatusColor(dustbin.fillLevel),
-                    fillOpacity: 0.2,
-                    opacity: 0.3,
+                    fillOpacity: 0.4,
+                    opacity: 0.6,
+                    weight: 1,
                   }}
                 />
               )}

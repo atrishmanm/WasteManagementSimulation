@@ -6,7 +6,11 @@ const { v4: uuidv4 } = require('uuid');
 const { DustbinData, Authority, Notification, SimulationStats, Location } = require('./types');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
+
+const BILLING_RATE_PER_KG = 4.5;
+const GREEN_POINTS_BASE = 10;
+const GREEN_POINTS_WEIGHT_FACTOR = 2;
 
 app.use(cors());
 app.use(express.json());
@@ -28,6 +32,9 @@ const state = {
   },
   notifications: [],
 };
+
+const calculateGreenPoints = (weightKg: number): number =>
+  Math.max(1, Math.round(GREEN_POINTS_BASE - weightKg * GREEN_POINTS_WEIGHT_FACTOR));
 
 // Initialize dustbins and authorities
 const initializeSimulation = () => {

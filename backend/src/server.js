@@ -5,9 +5,11 @@ const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 const BILLING_RATE_PER_KG = 4.5;
+const GREEN_POINTS_BASE = 10;
+const GREEN_POINTS_WEIGHT_FACTOR = 2;
 const RFID_TAP_COOLDOWN_MS = 5000;
 const RFID_SESSION_MS = 2 * 60 * 1000;
 
@@ -57,6 +59,9 @@ const monthKey = (date) => {
 };
 
 const todayIso = () => toIsoDay(new Date());
+
+const calculateGreenPoints = (weightKg) =>
+  Math.max(1, Math.round(GREEN_POINTS_BASE - weightKg * GREEN_POINTS_WEIGHT_FACTOR));
 
 const deriveBlock = (flatNumber) => {
   const match = String(flatNumber || '').toUpperCase().match(/[A-Z]+/);
@@ -288,12 +293,45 @@ const initializeResidents = () => {
     { flatNumber: 'C-301', name: 'Isha Malik', rfidCardId: 'RFID-C301', password: 'pass301' },
   ];
 
-  state.residents = seedResidents.map((resident) => ({
+  state.residents = seedResidents.map((resident, index) => ({
     id: uuidv4(),
     ...resident,
-    greenPoints: Math.floor(Math.random() * 80) + 20,
+    // First resident starts with baseline points, others get random historical points
+    greenPoints: index === 0 ? 25 : Math.floor(Math.random() * 80) + 40,
     createdAt: new Date().toISOString(),
   }));
+};
+
+const seedDisposalData = () => {
+  const currentMonth = monthKey(new Date());
+  // Skip the first resident (Riya Sen) to keep her data "actual" and starting from 0
+  state.residents.slice(1).forEach((resident) => {
+    // Add 5-8 historical entries for each other resident to populate the leaderboard
+    const numEntries = Math.floor(Math.random() * 4) + 5;
+    for (let i = 0; i < numEntries; i++) {
+      const weightKg = Number((Math.random() * 4 + 0.5).toFixed(2));
+      const billAmount = Number((weightKg * BILLING_RATE_PER_KG).toFixed(2));
+      const pointsEarned = calculateGreenPoints(weightKg);
+      
+      // Spread entries over the last few days
+      const date = new Date();
+      date.setDate(date.getDate() - Math.floor(Math.random() * 5));
+
+      const entry = {
+        id: uuidv4(),
+        residentId: resident.id,
+        residentName: resident.name,
+        flatNumber: resident.flatNumber,
+        weightKg,
+        ratePerKg: BILLING_RATE_PER_KG,
+        billAmount,
+        greenPointsEarned: pointsEarned,
+        createdAt: date.toISOString(),
+      };
+      state.disposalEntries.push(entry);
+      resident.greenPoints += pointsEarned;
+    }
+  });
 };
 
 const initializeSimulation = () => {
@@ -351,6 +389,7 @@ const initializeSimulation = () => {
 
   if (!state.residents.length) {
     initializeResidents();
+    seedDisposalData();
   }
 
   updateStats();
@@ -744,7 +783,7 @@ app.post('/api/rfid/tap', (req, res) => {
 });
 
 app.post('/api/waste/dispose', (req, res) => {
-  const { residentId, weightKg, useRandomWeight } = req.body;
+  const { residentId, weightKg, useRandomWeight, allowSimulated } = req.body;
 
   const resident = state.residents.find((entry) => entry.id === residentId);
   if (!resident) {
@@ -752,7 +791,7 @@ app.post('/api/waste/dispose', (req, res) => {
   }
 
   const sessionExpiry = state.rfidSessions[residentId] || 0;
-  if (sessionExpiry < Date.now()) {
+  if (!allowSimulated && sessionExpiry < Date.now()) {
     return res.status(401).json({ error: 'RFID session expired. Tap card again.' });
   }
 
@@ -765,6 +804,7 @@ app.post('/api/waste/dispose', (req, res) => {
   }
 
   const billAmount = Number((resolvedWeight * BILLING_RATE_PER_KG).toFixed(2));
+  const pointsEarned = calculateGreenPoints(resolvedWeight);
 
   const entry = {
     id: uuidv4(),
@@ -774,10 +814,12 @@ app.post('/api/waste/dispose', (req, res) => {
     weightKg: resolvedWeight,
     ratePerKg: BILLING_RATE_PER_KG,
     billAmount,
+    greenPointsEarned: pointsEarned,
     createdAt: new Date().toISOString(),
   };
 
   state.disposalEntries.push(entry);
+  resident.greenPoints += pointsEarned;
 
   const selectedBin = state.dustbins[Math.floor(Math.random() * state.dustbins.length)];
   if (selectedBin) {
@@ -836,7 +878,13 @@ app.get('/api/residents/:id/dashboard', (req, res) => {
   const residentEntries = state.disposalEntries.filter((entry) => entry.residentId === resident.id);
   const monthlyEntries = residentEntries.filter((entry) => monthKey(entry.createdAt) === currentMonth);
   const monthlyWasteKg = monthlyEntries.reduce((sum, entry) => sum + entry.weightKg, 0);
-  const currentBillAmount = monthlyEntries.reduce((sum, entry) => sum + entry.billAmount, 0);
+  
+  const totalPaidThisMonth = state.payments
+    .filter((p) => p.residentId === resident.id && monthKey(p.paidAt) === currentMonth)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const currentBillAmount = Math.max(0, monthlyEntries.reduce((sum, entry) => sum + entry.billAmount, 0) - totalPaidThisMonth);
+  
   const previousPayments = state.payments
     .filter((payment) => payment.residentId === resident.id)
     .slice(-6)
@@ -886,9 +934,15 @@ app.post('/api/residents/:id/pay', (req, res) => {
   }
 
   const currentMonth = monthKey(new Date());
-  const dueAmount = state.disposalEntries
+  const totalWasteCost = state.disposalEntries
     .filter((entry) => entry.residentId === resident.id && monthKey(entry.createdAt) === currentMonth)
     .reduce((sum, entry) => sum + entry.billAmount, 0);
+
+  const totalPaidThisMonth = state.payments
+    .filter((p) => p.residentId === resident.id && monthKey(p.paidAt) === currentMonth)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const dueAmount = Math.max(0, totalWasteCost - totalPaidThisMonth);
 
   if (dueAmount <= 0) {
     return res.status(400).json({ error: 'No due amount for this month' });

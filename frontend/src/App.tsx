@@ -6,7 +6,6 @@ import { MapView } from './components/MapView';
 import { Dashboard } from './components/Dashboard';
 import { NotificationPanel } from './components/NotificationPanel';
 import { ControlPanel } from './components/ControlPanel';
-import { SmartDustbin } from './components/SmartDustbin';
 import { ResidentAdminPortal } from './components/ResidentAdminPortal';
 import 'leaflet/dist/leaflet.css';
 import './App.css';
@@ -66,7 +65,7 @@ const normalizeLocationToSeoul = (location: Location, seed: string): Location =>
 
 function App() {
   const [loading, setLoading] = useState(true);
-  const [activeFeature, setActiveFeature] = useState<'map' | 'dustbin' | 'portal'>('map');
+  const [activeFeature, setActiveFeature] = useState<'map' | 'portal'>('map');
   const isRunning = useSimulationStore((state) => state.isRunning);
   const notifications = useSimulationStore((state) => state.notifications);
   const setDustbins = useSimulationStore((state) => state.setDustbins);
@@ -232,10 +231,8 @@ function App() {
               <span>Workspace</span>
               <strong>
                 {activeFeature === 'map'
-                  ? 'Map Feature'
-                  : activeFeature === 'dustbin'
-                    ? 'Dustbin Feature'
-                    : 'Resident/Admin Portal'}
+                  ? 'Map Analytics'
+                  : 'Resident/Admin Portal'}
               </strong>
             </div>
           </div>
@@ -246,13 +243,7 @@ function App() {
             className={`tab-button ${activeFeature === 'map' ? 'active' : ''}`}
             onClick={() => setActiveFeature('map')}
           >
-            Map Feature
-          </button>
-          <button
-            className={`tab-button ${activeFeature === 'dustbin' ? 'active' : ''}`}
-            onClick={() => setActiveFeature('dustbin')}
-          >
-            Dustbin Feature
+            Map Analytics
           </button>
           <button
             className={`tab-button ${activeFeature === 'portal' ? 'active' : ''}`}
@@ -290,13 +281,6 @@ function App() {
                 <Dashboard />
               </section>
             </div>
-          </div>
-        ) : activeFeature === 'dustbin' ? (
-          <div className="full-width-panel">
-            <section className="panel-shell panel-shell--lab">
-              <h2 className="panel-title">IoT Waste Detection Lab</h2>
-              <SmartDustbin />
-            </section>
           </div>
         ) : (
           <div className="full-width-panel">
