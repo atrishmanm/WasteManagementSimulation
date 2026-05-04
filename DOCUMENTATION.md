@@ -122,6 +122,28 @@ The blueprint automatically links the frontend to the backend URL. If you deploy
 
 ---
 
+## 🔥 Deployment (Firebase Hosting - Frontend Only)
+
+If you prefer to host your frontend on Firebase:
+
+### 1. Build the Frontend
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+### 2. Deploy
+Make sure you have the Firebase CLI installed (`npm install -g firebase-tools`).
+```bash
+firebase login
+firebase deploy --only hosting
+```
+
+**Note**: The backend must still be running (e.g., on Render). Ensure your `VITE_API_URL` and `VITE_WS_URL` are set correctly before building the frontend.
+
+---
+
 ## 🔮 Future Roadmap
 - **Persistence**: Integration with MongoDB/PostgreSQL for historical data.
 - **Optimization**: AI-based route optimization for collection vehicles.
