@@ -81,7 +81,7 @@ export const MapView: React.FC = () => {
 
       <div className="map-canvas">
         <MapContainer
-          center={[40.7128, -74.006]}
+          center={[37.5665, 126.978]}
           zoom={13}
           style={{ height: '100%', width: '100%' }}
           className="leaflet-map"

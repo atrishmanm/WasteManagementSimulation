@@ -298,21 +298,21 @@ const initializeResidents = () => {
 
 const initializeSimulation = () => {
   const locations = [
-    { latitude: 40.7128, longitude: -74.006 },
-    { latitude: 40.758, longitude: -73.9855 },
-    { latitude: 40.7484, longitude: -73.968 },
-    { latitude: 40.7489, longitude: -73.968 },
-    { latitude: 40.7505, longitude: -73.996 },
-    { latitude: 40.7614, longitude: -73.9776 },
-    { latitude: 40.7549, longitude: -73.9840 },
-    { latitude: 40.7282, longitude: -73.7949 },
-    { latitude: 40.7306, longitude: -73.9352 },
-    { latitude: 40.7489, longitude: -73.9680 },
-    { latitude: 40.7549, longitude: -73.9760 },
-    { latitude: 40.7614, longitude: -73.9776 },
-    { latitude: 40.7505, longitude: -73.996 },
-    { latitude: 40.7484, longitude: -73.968 },
-    { latitude: 40.758, longitude: -73.9855 },
+    { latitude: 37.5665, longitude: 126.978 },
+    { latitude: 37.5704, longitude: 126.992 },
+    { latitude: 37.5512, longitude: 126.9882 },
+    { latitude: 37.5796, longitude: 126.977 },
+    { latitude: 37.5663, longitude: 127.0017 },
+    { latitude: 37.5759, longitude: 126.9768 },
+    { latitude: 37.5563, longitude: 126.9266 },
+    { latitude: 37.541, longitude: 127.0161 },
+    { latitude: 37.5172, longitude: 127.0413 },
+    { latitude: 37.5121, longitude: 127.1024 },
+    { latitude: 37.531, longitude: 126.914 },
+    { latitude: 37.498, longitude: 127.0276 },
+    { latitude: 37.6091, longitude: 126.995 },
+    { latitude: 37.5837, longitude: 127.0109 },
+    { latitude: 37.5145, longitude: 126.8988 },
   ];
 
   state.dustbins = locations.map((location, index) => ({
@@ -331,20 +331,20 @@ const initializeSimulation = () => {
   state.authorities = [
     {
       id: uuidv4(),
-      name: 'North District Authority',
-      location: { latitude: 40.76, longitude: -73.97 },
+      name: 'Seoul Central Authority',
+      location: { latitude: 37.5665, longitude: 126.978 },
       availableVehicles: 3,
     },
     {
       id: uuidv4(),
-      name: 'South District Authority',
-      location: { latitude: 40.72, longitude: -74.0 },
+      name: 'Seoul South Authority',
+      location: { latitude: 37.5172, longitude: 127.0413 },
       availableVehicles: 2,
     },
     {
       id: uuidv4(),
-      name: 'East District Authority',
-      location: { latitude: 40.75, longitude: -73.93 },
+      name: 'Seoul East Authority',
+      location: { latitude: 37.541, longitude: 127.0161 },
       availableVehicles: 2,
     },
   ];

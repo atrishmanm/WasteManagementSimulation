@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSimulationStore } from './store/simulationStore';
+import { Location } from './types';
 import simulationService from './services/simulationService';
 import { MapView } from './components/MapView';
 import { Dashboard } from './components/Dashboard';
@@ -9,6 +10,59 @@ import { SmartDustbin } from './components/SmartDustbin';
 import { ResidentAdminPortal } from './components/ResidentAdminPortal';
 import 'leaflet/dist/leaflet.css';
 import './App.css';
+
+const SEOUL_CENTER: Location = { latitude: 37.5665, longitude: 126.978 };
+const SEOUL_BOUNDS = {
+  minLat: 37.43,
+  maxLat: 37.70,
+  minLng: 126.78,
+  maxLng: 127.20,
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const seededOffset = (seed: string, range: number) => {
+  const unit = (hashString(seed) % 1000) / 1000;
+  return (unit - 0.5) * range;
+};
+
+const isInSeoul = (location: Location) =>
+  location.latitude >= SEOUL_BOUNDS.minLat &&
+  location.latitude <= SEOUL_BOUNDS.maxLat &&
+  location.longitude >= SEOUL_BOUNDS.minLng &&
+  location.longitude <= SEOUL_BOUNDS.maxLng;
+
+const normalizeLocationToSeoul = (location: Location, seed: string): Location => {
+  if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
+    return SEOUL_CENTER;
+  }
+
+  if (isInSeoul(location)) {
+    return location;
+  }
+
+  const latitude = clamp(
+    SEOUL_CENTER.latitude + seededOffset(`${seed}-lat`, 0.16),
+    SEOUL_BOUNDS.minLat,
+    SEOUL_BOUNDS.maxLat
+  );
+  const longitude = clamp(
+    SEOUL_CENTER.longitude + seededOffset(`${seed}-lng`, 0.22),
+    SEOUL_BOUNDS.minLng,
+    SEOUL_BOUNDS.maxLng
+  );
+
+  return { latitude, longitude };
+};
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -34,8 +88,18 @@ function App() {
           simulationService.getSimulationState(),
         ]);
 
-        setDustbins(dustbins);
-        setAuthorities(authorities);
+        setDustbins(
+          dustbins.map((dustbin) => ({
+            ...dustbin,
+            location: normalizeLocationToSeoul(dustbin.location, dustbin.id),
+          }))
+        );
+        setAuthorities(
+          authorities.map((authority) => ({
+            ...authority,
+            location: normalizeLocationToSeoul(authority.location, authority.id),
+          }))
+        );
         setStats(stats);
         setLoading(false);
 
@@ -80,7 +144,12 @@ function App() {
             const data = JSON.parse(event.data);
 
             if (data.type === 'dustbin-update') {
-              setDustbins(data.dustbins);
+              setDustbins(
+                data.dustbins.map((dustbin: { location: Location; id: string }) => ({
+                  ...dustbin,
+                  location: normalizeLocationToSeoul(dustbin.location, dustbin.id),
+                }))
+              );
             } else if (data.type === 'stats-update') {
               setStats(data.stats);
             } else if (data.type === 'notification') {
@@ -95,7 +164,12 @@ function App() {
                 read: false,
               });
             } else if (data.type === 'authorities-update') {
-              setAuthorities(data.authorities);
+              setAuthorities(
+                data.authorities.map((authority: { location: Location; id: string }) => ({
+                  ...authority,
+                  location: normalizeLocationToSeoul(authority.location, authority.id),
+                }))
+              );
             }
           } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
@@ -142,7 +216,7 @@ function App() {
         <p className="header-eyebrow">Smart City Command Center</p>
         <div className="header-row">
           <div className="header-copy">
-            <h1>Smart Waste Operations Console</h1>
+            <h1>RFID Based Iot Smart Waste Management System</h1>
             <p>Live telemetry, route visibility, and proactive collection decisions in one workspace.</p>
           </div>
           <div className="header-stats">
