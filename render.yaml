@@ -2,7 +2,7 @@ services:
   # Backend Service
   - type: web
     name: waste-simulator-backend
-    env: node
+    runtime: node
     plan: free
     buildCommand: cd backend && npm install && npm run build
     startCommand: cd backend && node src/server.js
@@ -13,9 +13,9 @@ services:
         value: production
 
   # Frontend Service
-  - type: static
+  - type: web
     name: waste-simulator-frontend
-    env: static
+    runtime: static
     plan: free
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
