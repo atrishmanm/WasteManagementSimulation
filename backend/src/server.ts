@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const { DustbinData, Authority, Notification, SimulationStats, Location } = require('./types');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 
 const BILLING_RATE_PER_KG = 4.5;
 const GREEN_POINTS_BASE = 10;

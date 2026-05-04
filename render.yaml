@@ -3,7 +3,7 @@ services:
   - type: web
     name: waste-simulator-backend
     runtime: node
-    plan: free
+    plan: free # This is correct for the Node backend
     buildCommand: cd backend && npm install && npm run build
     startCommand: cd backend && node src/server.js
     envVars:
@@ -16,7 +16,7 @@ services:
   - type: web
     name: waste-simulator-frontend
     runtime: static
-    plan: free
+    # plan: free (REMOVED - Static sites are free by default)
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
     envVars:

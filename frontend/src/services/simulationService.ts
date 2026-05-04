@@ -12,11 +12,11 @@ import {
   SustainabilityMetrics,
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 10000,
+  timeout: 5000,
 });
 
 export const simulationService = {
@@ -145,8 +145,7 @@ export const simulationService = {
 
   // WebSocket event subscription (for real-time updates)
   getWebSocketUrl: (): string => {
-    const baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
-    return `${baseUrl}/ws`;
+    return 'ws://localhost:3001/ws';
   },
 };
 
