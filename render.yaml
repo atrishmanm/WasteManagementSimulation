@@ -21,18 +21,6 @@ services:
     staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: waste-simulator-backend
-          property: url
-          suffix: /api
+        value: https://waste-simulator-backend.onrender.com/api
       - key: VITE_WS_URL
-        fromService:
-          type: web
-          name: waste-simulator-backend
-          property: url
-          replace:
-            - search: https://
-              replace: wss://
-            - search: http://
-              replace: ws://
+        value: wss://waste-simulator-backend.onrender.com
